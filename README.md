@@ -11,6 +11,11 @@ supported platforms:
 
   - [Windows](https://github.com/nathanpc/copy-stand-windows)
 
+## Building
+
+Since this application is intended to be built for older platforms, it is
+required to use [Android Studio Narwhal 4 Feature Drop | 2025.1.4](https://developer.android.com/studio/archive).
+
 ## License
 
 This application is free software; you may redistribute and/or modify it under 
