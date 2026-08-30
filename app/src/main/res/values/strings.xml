@@ -1,6 +1,12 @@
 <resources>
+    <!-- General -->
     <string name="app_name">Copy Stand</string>
+
+    <!-- Menu Items -->
     <string name="start_server">Start Sync Server</string>
     <string name="stop_server">Stop Sync Server</string>
     <string name="settings">Settings</string>
+
+    <!-- Messages -->
+    <string name="service_failed_start">Clipboard watcher foreground service failed to start.</string>
 </resources>
