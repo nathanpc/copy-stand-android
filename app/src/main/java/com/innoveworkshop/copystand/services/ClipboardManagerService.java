@@ -5,9 +5,14 @@ import static android.widget.Toast.LENGTH_LONG;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
+import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
@@ -30,6 +35,7 @@ import java.util.Calendar;
 public class ClipboardManagerService extends Service {
     private final ArrayList<Clip> clips = new ArrayList();
     private ClipboardUpdateListener clipboardUpdateListener = null;
+    private ClipboardManager clipboard;
 
     private final ServerThread serverThread = new ServerThread();
     private final IBinder binder = new LocalBinder();
@@ -39,23 +45,35 @@ public class ClipboardManagerService extends Service {
 
     @Override
     public void onCreate() {
-        Log.i(TAG, "onCreate()");
+        Log.d(TAG, "onCreate()");
         super.onCreate();
+
+        // Get the system clipboard object and add our event listener to it.
+        clipboard = (ClipboardManager) getApplicationContext().getSystemService(CLIPBOARD_SERVICE);
+        clipboard.addPrimaryClipChangedListener(onPrimaryClipChangedListener);
+
+        // Start the synchronization server thread.
         serverThread.start();
     }
 
     @Override
     public void onDestroy() {
-        Log.i(TAG, "onDestroy()");
+        Log.d(TAG, "onDestroy()");
         super.onDestroy();
+
+        // Remove our clipboard changed event handler and stop the synchronization server thread.
+        clipboard.removePrimaryClipChangedListener(onPrimaryClipChangedListener);
         serverThread.interrupt();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.i(TAG, "onStartCommand()");
+        Log.d(TAG, "onStartCommand()");
 
         try {
+            // Check if the system's clipboard is available.
+            notifyIfClipboardUnaccessible();
+
             // Start the foreground service with its notification.
             Notification notification = createServiceNotification();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -80,9 +98,9 @@ public class ClipboardManagerService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         if (intent.getComponent() != null) {
-            Log.i(TAG, "Bound to activity " + intent.getComponent().getClassName());
+            Log.d(TAG, "Bound to activity " + intent.getComponent().getClassName());
         } else {
-            Log.i(TAG, "Bound to unknown activity");
+            Log.d(TAG, "Bound to unknown activity");
         }
 
         return binder;
@@ -91,15 +109,60 @@ public class ClipboardManagerService extends Service {
     @Override
     public boolean onUnbind(Intent intent) {
         if (intent.getComponent() != null) {
-            Log.i(TAG, "Unbound from activity " + intent.getComponent().getClassName());
+            Log.d(TAG, "Unbound from activity " + intent.getComponent().getClassName());
         } else {
-            Log.i(TAG, "Unbound from unknown activity");
+            Log.d(TAG, "Unbound from unknown activity");
         }
 
-        // Unbind clipboard update event listener.
+        // Unbind clipboard update event listener and test if we can still access the clipboard.
         clipboardUpdateListener = null;
+        notifyIfClipboardUnaccessible();
 
         return super.onUnbind(intent);
+    }
+
+    /**
+     * Checks if the system's clipboard is accessible and if not, because of Android 10+ limitation,
+     * a message to the user should be displayed.
+     */
+    public void notifyIfClipboardUnaccessible() {
+        // Do nothing if clipboard is accessible.
+        if (clipboard.getPrimaryClip() != null)
+            return;
+
+        // Display message.
+        Toast.makeText(getApplicationContext(), R.string.clipboard_unaccessible, LENGTH_LONG)
+                .show();
+
+        // Show notification with more information about the issue.
+        NotificationCompat.Builder notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle("Clipboard Unaccessible")
+                .setContentText(getString(R.string.clipboard_unaccessible))
+                .setAutoCancel(true)
+                .setChannelId(CHANNEL_ID);
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setData(Uri.parse(getString(R.string.clipboard_help_url)));
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        notification.setContentIntent(pendingIntent);
+        NotificationManager notificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.notify(1234, notification.build());
+    }
+
+    /**
+     * Adds a {@link Clip} object to the top of our clipboard history list.
+     *
+     * @param clip Clipboard item to be added to the history.
+     */
+    public void addClip(Clip clip) {
+        // Add the clip object to our internal history.
+        clips.add(0, clip);
+
+        // Notify the event listener that the clipboard history has been updated.
+        if (ClipboardManagerService.this.clipboardUpdateListener != null)
+            ClipboardManagerService.this.clipboardUpdateListener.onClipAdded(clip);
     }
 
     /**
@@ -141,6 +204,30 @@ public class ClipboardManagerService extends Service {
     }
 
     /**
+     * Event handler for clipboard content changed events.
+     */
+    ClipboardManager.OnPrimaryClipChangedListener onPrimaryClipChangedListener = () -> {
+        // If we have no new clip, ignore everything.
+        if (!clipboard.hasPrimaryClip())
+            return;
+
+        // Get the contents of the clipboard.
+        ClipData data = clipboard.getPrimaryClip();
+        if (data == null) {
+            Log.e(TAG, "ClipboardManager.getPrimaryClip() returned null");
+            return;
+        }
+
+        // Create a Clip object and add it to the history.
+        Clip clip = Clip.fromClipboard(data);
+        if (clip == null) {
+            Log.d(TAG, "ClipData object could not be converted to Clip");
+            return;
+        }
+        addClip(clip);
+    };
+
+    /**
      * Background synchronization server thread.
      */
     private class ServerThread extends Thread {
@@ -157,12 +244,7 @@ public class ClipboardManagerService extends Service {
             while (running) {
                 try {
                     Clip clip = new Clip(Calendar.getInstance(), "Some item " + i++, "localhost");
-                    clips.add(clip);
-
-                    // Notify the event listener that the clipboard history has been updated.
-                    if (ClipboardManagerService.this.clipboardUpdateListener != null)
-                        ClipboardManagerService.this.clipboardUpdateListener.onClipAdded(clip);
-
+                    addClip(clip);
                     sleep(1000);
                 } catch (InterruptedException e) {
                     running = false;

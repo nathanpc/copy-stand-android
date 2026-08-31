@@ -9,4 +9,8 @@
 
     <!-- Messages -->
     <string name="service_failed_start">Clipboard watcher foreground service failed to start.</string>
+    <string name="clipboard_unaccessible">The application cannot access the clipboard while on the background.</string>
+
+    <!-- Misc. -->
+    <string name="clipboard_help_url">https://github.com/nathanpc/copy-stand-android/blob/main/README.md#android-10-limitations</string>
 </resources>
