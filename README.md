@@ -29,7 +29,9 @@ use this application **root is required**.
 
 You must install the [Clipboard Whitelist](https://github.com/Kr328/Riru-ClipboardWhitelist)
 module in [Magisk](https://github.com/topjohnwu/Magisk) and use it to whitelist
-the Copy Stand application.
+the Copy Stand application. If you're running **Android 14+**, the clipboard API
+has changed and thus you need to use the [Clipboard Whitelist Next](https://github.com/alexhulbert/zygisk-clipboard-whitelist-next)
+module instead.
 
 If you're running a version of Android that's below Q (10), root is not required
 for the application to work.
