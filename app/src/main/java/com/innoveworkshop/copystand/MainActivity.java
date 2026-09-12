@@ -10,6 +10,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
@@ -75,9 +76,8 @@ public class MainActivity extends AppCompatActivity {
         super.onWindowFocusChanged(hasFocus);
 
         // Manually get the clipboard contents if we are not allowed in the background.
-        if (PermissionUtils.systemBlocksBackgroundClipboardAccess()) {
-            // TODO: Get the contents of the clipboard.
-        }
+        if (PermissionUtils.systemBlocksBackgroundClipboardAccess() && boundService)
+            clipboardService.updateFromClipboard();
     }
 
     /**

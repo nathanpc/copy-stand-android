@@ -27,7 +27,6 @@ import com.innoveworkshop.copystand.models.Clip;
 import com.innoveworkshop.copystand.utils.PermissionUtils;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 
 /**
  * Background service responsible for monitoring the system's clipboard for changes and
@@ -126,6 +125,32 @@ public class ClipboardManagerService extends Service {
     }
 
     /**
+     * Updates the history based on the current contents of the clipboard.
+     */
+    public void updateFromClipboard() {
+        // Ignore everything if we don't have a primary clip on the clipboard.
+        if (!clipboard.hasPrimaryClip())
+            return;
+
+        // Get the contents of the clipboard.
+        ClipData data = clipboard.getPrimaryClip();
+        if (data == null) {
+            Log.e(TAG, "ClipboardManager.getPrimaryClip() returned null");
+            return;
+        }
+
+        // Create a Clip object.
+        Clip clip = Clip.fromClipboard(data);
+        if (clip == null) {
+            Log.d(TAG, "ClipData object could not be converted to Clip");
+            return;
+        }
+
+        // Add it to the history.
+        addClip(clip);
+    }
+
+    /**
      * Checks if the system's clipboard is accessible and if not, because of Android 10+ limitation,
      * a message to the user should be displayed.
      */
@@ -207,29 +232,12 @@ public class ClipboardManagerService extends Service {
         return clips;
     }
 
+    // Update our history based on the contents of the clipboard.
     /**
      * Event handler for clipboard content changed events.
      */
-    ClipboardManager.OnPrimaryClipChangedListener onPrimaryClipChangedListener = () -> {
-        // If we have no new clip, ignore everything.
-        if (!clipboard.hasPrimaryClip())
-            return;
-
-        // Get the contents of the clipboard.
-        ClipData data = clipboard.getPrimaryClip();
-        if (data == null) {
-            Log.e(TAG, "ClipboardManager.getPrimaryClip() returned null");
-            return;
-        }
-
-        // Create a Clip object and add it to the history.
-        Clip clip = Clip.fromClipboard(data);
-        if (clip == null) {
-            Log.d(TAG, "ClipData object could not be converted to Clip");
-            return;
-        }
-        addClip(clip);
-    };
+    ClipboardManager.OnPrimaryClipChangedListener onPrimaryClipChangedListener =
+            this::updateFromClipboard;
 
     /**
      * Background synchronization server thread.
@@ -244,11 +252,8 @@ public class ClipboardManagerService extends Service {
         @Override
         public void run() {
             running = true;
-            int i = 1;
             while (running) {
                 try {
-                    Clip clip = new Clip(Calendar.getInstance(), "Some item " + i++, "localhost");
-                    addClip(clip);
                     sleep(1000);
                 } catch (InterruptedException e) {
                     running = false;

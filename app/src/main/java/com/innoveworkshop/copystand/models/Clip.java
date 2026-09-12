@@ -1,5 +1,8 @@
 package com.innoveworkshop.copystand.models;
 
+import android.content.ClipData;
+import android.net.Uri;
+
 import java.util.Calendar;
 
 /**
@@ -21,6 +24,39 @@ public class Clip {
         this.creationDate = creationDate;
         this.data = data;
         this.device = device;
+    }
+
+    /**
+     * Constructs a new clipboard item that was copied right now and in our own device.
+     *
+     * @param data Contents of the clipboard item.
+     */
+    public Clip(String data) {
+        this(Calendar.getInstance(), data, "localhost");
+    }
+
+    /**
+     * Constructs a new clipboard item from a system's clipboard data object.
+     *
+     * @param data System's clipboard data object.
+     *
+     * @return Clip object or {@code null} if it cannot be converted.
+     */
+    public static Clip fromClipboard(ClipData data) {
+        for (int i = 0; i < data.getItemCount(); i++) {
+            ClipData.Item item = data.getItemAt(i);
+
+            // Try to get the contents of the clipboard.
+            if (item.getText() != null) {
+                // Was it plain text?
+                return new Clip(item.getText().toString());
+            } else if (item.getUri() != null) {
+                // Was it an URI?
+                return new Clip(item.getUri().toString());
+            }
+        }
+
+        return null;
     }
 
     /**
