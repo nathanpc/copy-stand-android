@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="toolbarPrimary">#FFFFFF</color>
+    <color name="primary">@color/ic_launcher_background</color>
+
+    <color name="toolbarPrimary">#372C1D</color>
+    <color name="toolbarBackground">@color/primary</color>
 </resources>

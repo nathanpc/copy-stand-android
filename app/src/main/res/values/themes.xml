@@ -6,4 +6,15 @@
     </style>
 
     <style name="Theme.CopyStand" parent="Base.Theme.CopyStand" />
+
+    <!-- Application toolbar theme. -->
+    <style name="Theme.CopyStand.Toolbar" parent="ThemeOverlay.AppCompat.DayNight.ActionBar">
+        <item name="android:textColorPrimary">@color/toolbarPrimary</item>
+        <item name="android:background">@color/toolbarBackground</item>
+        <item name="titleTextColor">@color/toolbarPrimary</item>
+        <item name="actionMenuTextColor">@color/toolbarPrimary</item>
+        <item name="colorOnPrimary">@color/toolbarPrimary</item>
+        <item name="colorAccent">@color/toolbarPrimary</item>
+        <item name="colorControlNormal">@color/toolbarPrimary</item>
+    </style>
 </resources>

@@ -12,15 +12,13 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/colorPrimary"
         android:minHeight="?attr/actionBarSize"
-        android:theme="?attr/actionBarTheme"
+        android:theme="@style/Theme.CopyStand.Toolbar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:menu="@menu/main_menu"
-        app:title="@string/app_name"
-        app:titleTextColor="@color/toolbarPrimary" />
+        app:title="@string/app_name" />
 
     <ListView
         android:id="@+id/clips_list"

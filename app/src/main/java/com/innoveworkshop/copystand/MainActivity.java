@@ -9,6 +9,7 @@ import android.content.ServiceConnection;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.view.Menu;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -51,6 +52,12 @@ public class MainActivity extends AppCompatActivity {
 
         // Get UI components.
         listView = findViewById(R.id.clips_list);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
     }
 
     @Override

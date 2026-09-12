@@ -3,7 +3,7 @@
     android:height="24dp" android:tint="@color/toolbarPrimary" android:viewportHeight="24" android:viewportWidth="24" android:width="24dp"
     tools:ignore="VectorRaster">
       
-    <path android:fillColor="@color/toolbarPrimary" android:pathData="M8,5v14l11,-7z"
+    <path android:fillColor="@color/toolbarPrimary" android:pathData="M6,6h12v12H6z"
         tools:ignore="VectorRaster" />
     
 </vector>
