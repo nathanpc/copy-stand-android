@@ -151,6 +151,12 @@ public class ClipboardManagerService extends Service {
         addClip(clip);
     }
 
+    /**
+     * Shows a quick access notification for Android versions that do not allow us to check the
+     * clipboard on the background.
+     *
+     * @param context Application's context.
+     */
     public static void showQuickAccessNotification(Context context) {
         // Build the notification.
         NotificationCompat.Builder notification = new NotificationCompat.Builder(
@@ -207,15 +213,31 @@ public class ClipboardManagerService extends Service {
     /**
      * Adds a {@link Clip} object to the top of our clipboard history list.
      *
-     * @param clip Clipboard item to be added to the history.
+     * @param clip           Clipboard item to be added to the history.
+     * @param checkDuplicate Checks if the item is already the latest in the history.
      */
-    public void addClip(Clip clip) {
+    public void addClip(Clip clip, boolean checkDuplicate) {
+        // Check if it's a duplicate clip item.
+        if (!clips.isEmpty() && clips.get(0).equals(clip))
+            return;
+
         // Add the clip object to our internal history.
         clips.add(0, clip);
+
+        // TODO: Broadcast clipboard change.
 
         // Notify the event listener that the clipboard history has been updated.
         if (ClipboardManagerService.this.clipboardUpdateListener != null)
             ClipboardManagerService.this.clipboardUpdateListener.onClipAdded(clip);
+    }
+
+    /**
+     * Adds a {@link Clip} object to the top of our clipboard history list.
+     *
+     * @param clip Clipboard item to be added to the history.
+     */
+    public void addClip(Clip clip) {
+        addClip(clip, true);
     }
 
     /**

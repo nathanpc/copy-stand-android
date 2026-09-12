@@ -3,6 +3,8 @@ package com.innoveworkshop.copystand.models;
 import android.content.ClipData;
 import android.net.Uri;
 
+import androidx.annotation.Nullable;
+
 import java.util.Calendar;
 
 /**
@@ -84,5 +86,24 @@ public class Clip {
      */
     public String getDevice() {
         return this.device;
+    }
+
+    /**
+     * Checks if a {@see Clip} object is the same as this one, looking only at the contents, not at
+     * the rest of the metadata.
+     *
+     * @param obj Object to be checked for equality.
+     *
+     * @return {@code true} if the contents of the clipboard item are the same, {@code false} if
+     *         they are not the same or the object is not of {@see Clip} type.
+     */
+    @Override
+    public boolean equals(@Nullable Object obj) {
+        // Null object or non-Clip objects are automatically not equal.
+        if (!(obj instanceof Clip))
+            return false;
+
+        // Compare the items data field.
+        return data.equals(((Clip) obj).data);
     }
 }
