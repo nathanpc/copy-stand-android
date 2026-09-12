@@ -1,15 +1,21 @@
 package com.innoveworkshop.copystand;
 
+import android.Manifest;
+import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.widget.ListView;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -17,6 +23,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.innoveworkshop.copystand.adapters.ClipListItemAdapter;
 import com.innoveworkshop.copystand.models.Clip;
 import com.innoveworkshop.copystand.services.ClipboardManagerService;
+import com.innoveworkshop.copystand.utils.PermissionUtils;
 
 /**
  * Application's main activity.
@@ -49,15 +56,73 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
 
-        // Start the application's foreground service.
-        startClipboardService(getApplicationContext());
-        bindClipboardService();
+        // Request the notification runtime permission.
+        requestNotificationRuntimePermission(getApplicationContext(), () -> {
+            // Start the application's foreground service.
+            startClipboardService(getApplicationContext());
+            bindClipboardService();
+        });
     }
 
     @Override
     protected void onStop() {
         super.onStop();
         unbindClipboardService();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+
+        // Manually get the clipboard contents if we are not allowed in the background.
+        if (PermissionUtils.systemBlocksBackgroundClipboardAccess()) {
+            // TODO: Get the contents of the clipboard.
+        }
+    }
+
+    /**
+     * Requests the runtime permission for notification access.
+     *
+     * @param context Application's context.
+     * @param success What to do when we have permission to use the notification service.
+     */
+    public void requestNotificationRuntimePermission(Context context, Runnable success) {
+        // This runtime permission was not required until Tiramisu.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+            return;
+
+        // Build up the permission rationale dialog in case we need it.
+        AlertDialog.Builder permissionRationaleDialog = new AlertDialog.Builder(context)
+                .setTitle(R.string.permission_needed)
+                .setMessage(R.string.notification_permission_message)
+                .setPositiveButton(R.string.grant_permission, (dialog, which) -> {
+                    // Request the runtime permission again.
+                    requestNotificationRuntimePermission(context, success);
+                })
+                .setNegativeButton(android.R.string.ok, null)
+                .setIconAttribute(android.R.attr.alertDialogIcon);
+
+        // Decide what to do based on the status of our runtime permission.
+        if (PermissionUtils.hasNotificationPermission(context)) {
+            success.run();
+        } else if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                Manifest.permission.POST_NOTIFICATIONS)) {
+            // Show informative dialog about why the user wants notifications.
+            permissionRationaleDialog.show();
+        } else {
+            // Permission request dialog handler.
+            ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(
+                    new ActivityResultContracts.RequestPermission(), isGranted -> {
+                        if (isGranted) {
+                            success.run();
+                        } else {
+                            permissionRationaleDialog.show();
+                        }
+                    });
+
+            // Request the notification runtime permission.
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+        }
     }
 
     /**

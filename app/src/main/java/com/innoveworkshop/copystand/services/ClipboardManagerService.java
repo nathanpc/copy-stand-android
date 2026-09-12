@@ -24,6 +24,7 @@ import androidx.core.app.NotificationCompat;
 
 import com.innoveworkshop.copystand.R;
 import com.innoveworkshop.copystand.models.Clip;
+import com.innoveworkshop.copystand.utils.PermissionUtils;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -33,7 +34,7 @@ import java.util.Calendar;
  * synchronizing it with other devices on the network.
  */
 public class ClipboardManagerService extends Service {
-    private final ArrayList<Clip> clips = new ArrayList();
+    private final ArrayList<Clip> clips = new ArrayList<>();
     private ClipboardUpdateListener clipboardUpdateListener = null;
     private ClipboardManager clipboard;
 
@@ -50,7 +51,8 @@ public class ClipboardManagerService extends Service {
 
         // Get the system clipboard object and add our event listener to it.
         clipboard = (ClipboardManager) getApplicationContext().getSystemService(CLIPBOARD_SERVICE);
-        clipboard.addPrimaryClipChangedListener(onPrimaryClipChangedListener);
+        if (PermissionUtils.systemBlocksBackgroundClipboardAccess())
+            clipboard.addPrimaryClipChangedListener(onPrimaryClipChangedListener);
 
         // Start the synchronization server thread.
         serverThread.start();
@@ -62,7 +64,8 @@ public class ClipboardManagerService extends Service {
         super.onDestroy();
 
         // Remove our clipboard changed event handler and stop the synchronization server thread.
-        clipboard.removePrimaryClipChangedListener(onPrimaryClipChangedListener);
+        if (PermissionUtils.systemBlocksBackgroundClipboardAccess())
+            clipboard.removePrimaryClipChangedListener(onPrimaryClipChangedListener);
         serverThread.interrupt();
     }
 
@@ -72,11 +75,12 @@ public class ClipboardManagerService extends Service {
 
         try {
             // Check if the system's clipboard is available.
-            notifyIfClipboardUnaccessible();
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+                notifyIfClipboardUnaccessible();
 
             // Start the foreground service with its notification.
             Notification notification = createServiceNotification();
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (PermissionUtils.systemBlocksBackgroundClipboardAccess()) {
                 int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE;
                 startForeground(SERVICE_ID, notification, type);
             } else {
