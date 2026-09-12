@@ -38,7 +38,7 @@ public class ClipboardManagerService extends Service {
     private ClipboardUpdateListener clipboardUpdateListener = null;
     private ClipboardManager clipboard;
 
-    private final ServerThread serverThread = new ServerThread();
+    private ServerThread serverThread = new ServerThread();
     private final IBinder binder = new LocalBinder();
     private final String TAG = "CLIPBOARD_SERVICE";
     private final int SERVICE_ID = 2547;
@@ -55,7 +55,7 @@ public class ClipboardManagerService extends Service {
             clipboard.addPrimaryClipChangedListener(onPrimaryClipChangedListener);
 
         // Start the synchronization server thread.
-        serverThread.start();
+        startSynchronizationServer();
     }
 
     @Override
@@ -66,7 +66,7 @@ public class ClipboardManagerService extends Service {
         // Remove our clipboard changed event handler and stop the synchronization server thread.
         if (PermissionUtils.systemBlocksBackgroundClipboardAccess())
             clipboard.removePrimaryClipChangedListener(onPrimaryClipChangedListener);
-        serverThread.interrupt();
+        stopSynchronizationServer();
     }
 
     @Override
@@ -278,6 +278,35 @@ public class ClipboardManagerService extends Service {
         return clips;
     }
 
+    /**
+     * Start synchronization server thread. Ignores the command if the server is already running.
+     */
+    public void startSynchronizationServer() {
+        if (!isServerRunning()) {
+            serverThread = new ServerThread();
+            serverThread.start();
+        }
+    }
+
+    /**
+     * Interrupts the synchronization server thread. Ignores the command if the server is not
+     * running.
+     */
+    public void stopSynchronizationServer() {
+        if (isServerRunning())
+            serverThread.interrupt();
+    }
+
+    /**
+     * Checks if the background synchronization server is currently running.
+     *
+     * @return {@code true} if the background synchronization server is running, {@code false}
+     *         otherwise.
+     */
+    public boolean isServerRunning() {
+        return serverThread.running;
+    }
+
     // Update our history based on the contents of the clipboard.
     /**
      * Event handler for clipboard content changed events.
@@ -298,11 +327,16 @@ public class ClipboardManagerService extends Service {
         @Override
         public void run() {
             running = true;
+            if (clipboardUpdateListener != null)
+                clipboardUpdateListener.onServerStatusChanged(true);
+
             while (running) {
                 try {
                     sleep(1000);
                 } catch (InterruptedException e) {
                     running = false;
+                    if (clipboardUpdateListener != null)
+                        clipboardUpdateListener.onServerStatusChanged(false);
                 }
             }
         }
@@ -310,6 +344,8 @@ public class ClipboardManagerService extends Service {
         @Override
         public void interrupt() {
             running = false;
+            if (clipboardUpdateListener != null)
+                clipboardUpdateListener.onServerStatusChanged(false);
             super.interrupt();
         }
     }
@@ -334,6 +370,13 @@ public class ClipboardManagerService extends Service {
      * other devices on the network.
      */
     public interface ClipboardUpdateListener {
+        /**
+         * The background synchronization server running status has changed.
+         *
+         * @param running Is the background synchronization server currently running?
+         */
+        void onServerStatusChanged(boolean running);
+
         /**
          * A new clipboard item was added to the history maintained by the manager service.
          *

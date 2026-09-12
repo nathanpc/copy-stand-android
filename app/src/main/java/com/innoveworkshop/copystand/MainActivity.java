@@ -10,6 +10,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -36,6 +37,8 @@ public class MainActivity extends AppCompatActivity {
     private ClipListItemAdapter listAdapter;
 
     private ListView listView;
+    private MenuItem syncServerMenuItem;
+    private MenuItem settingsMenuItem;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,7 +59,35 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate main menu.
+        super.onCreateOptionsMenu(menu);
         getMenuInflater().inflate(R.menu.main_menu, menu);
+
+        // Synchronization server button.
+        syncServerMenuItem = menu.findItem(R.id.sync_server_button);
+        syncServerMenuItem.setOnMenuItemClickListener(item -> {
+            // Change the running status of the server.
+            if (boundService) {
+                if (clipboardService.isServerRunning()) {
+                    clipboardService.stopSynchronizationServer();
+                } else {
+                    clipboardService.startSynchronizationServer();
+                }
+
+                // Update the button.
+                updateServerStatusComponents(clipboardService.isServerRunning());
+            }
+
+            return false;
+        });
+
+        // Settings button.
+        settingsMenuItem = menu.findItem(R.id.settings_button);
+
+        // Update the menu items.
+        if (boundService)
+            updateServerStatusComponents(clipboardService.isServerRunning());
+
         return true;
     }
 
@@ -81,6 +112,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
+
+        // Show server status.
+        if (boundService)
+            updateServerStatusComponents(clipboardService.isServerRunning());
 
         if (PermissionUtils.systemBlocksBackgroundClipboardAccess()) {
             // Manually get the clipboard contents if we are not allowed in the background.
@@ -174,20 +209,39 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
+     * Changes the UI components according to the synchronization server running status.
+     *
+     * @param running Is the synchronization server running?
+     */
+    public void updateServerStatusComponents(boolean running) {
+        if (syncServerMenuItem != null) {
+            syncServerMenuItem.setIcon(running ? R.drawable.stop : R.drawable.play);
+            syncServerMenuItem.setTitle(running ? R.string.stop_server : R.string.start_server);
+        }
+    }
+
+    /**
      * Event listener for clipboard updates.
      */
     private final ClipboardManagerService.ClipboardUpdateListener onClipboardUpdated =
             new ClipboardManagerService.ClipboardUpdateListener() {
-        @Override
-        public void onClipAdded(Clip clip) {
-            runOnUiThread(new Runnable() {
                 @Override
-                public void run() {
-                    if (listAdapter != null)
-                        listAdapter.notifyDataSetChanged();
+                public void onServerStatusChanged(boolean running) {
+                    runOnUiThread(() -> {
+                        updateServerStatusComponents(running);
+                        Toast.makeText(getApplicationContext(), running ?
+                                R.string.sync_server_started : R.string.sync_server_stopped,
+                                Toast.LENGTH_SHORT).show();
+                    });
                 }
-            });
-        }
+
+                @Override
+                public void onClipAdded(Clip clip) {
+                    runOnUiThread(() -> {
+                        if (listAdapter != null)
+                            listAdapter.notifyDataSetChanged();
+                    });
+                }
     };
 
     /**
@@ -206,6 +260,9 @@ public class MainActivity extends AppCompatActivity {
             listAdapter = new ClipListItemAdapter(getApplicationContext(), R.layout.list_item,
                     clipboardService.getClips());
             listView.setAdapter(listAdapter);
+
+            // Show server status.
+            updateServerStatusComponents(clipboardService.isServerRunning());
 
             // Create an event listener for clipboard list updates.
             clipboardService.setClipboardUpdateListener(onClipboardUpdated);

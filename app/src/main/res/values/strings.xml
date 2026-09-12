@@ -13,6 +13,8 @@
     <string name="service_failed_start">Clipboard watcher foreground service failed to start.</string>
     <string name="clipboard_unaccessible">The application cannot access the clipboard while on the background.</string>
     <string name="clip_get_failed">Failed to get the contents of the clipboard.</string>
+    <string name="sync_server_started">Background synchronization started.</string>
+    <string name="sync_server_stopped">Background synchronization stopped.</string>
 
     <!-- Quick access notification. -->
     <string name="quick_access_title">Copy Stand</string>
