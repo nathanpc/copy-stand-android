@@ -22,6 +22,7 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
+import com.innoveworkshop.copystand.MainActivity;
 import com.innoveworkshop.copystand.R;
 import com.innoveworkshop.copystand.models.Clip;
 import com.innoveworkshop.copystand.utils.PermissionUtils;
@@ -41,7 +42,7 @@ public class ClipboardManagerService extends Service {
     private final IBinder binder = new LocalBinder();
     private final String TAG = "CLIPBOARD_SERVICE";
     private final int SERVICE_ID = 2547;
-    private final String CHANNEL_ID = "COPYSTAND";
+    private static final String CHANNEL_ID = "COPYSTAND";
 
     @Override
     public void onCreate() {
@@ -150,6 +151,29 @@ public class ClipboardManagerService extends Service {
         addClip(clip);
     }
 
+    public static void showQuickAccessNotification(Context context) {
+        // Build the notification.
+        NotificationCompat.Builder notification = new NotificationCompat.Builder(
+                context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle(context.getString(R.string.quick_access_title))
+                .setContentText(context.getString(R.string.quick_access_message))
+                .setAutoCancel(true)
+                .setChannelId(CHANNEL_ID);
+
+        // Create the intent to open our application.
+        Intent intent = new Intent(context, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        notification.setContentIntent(pendingIntent);
+
+        // Show the notification.
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.notify(2345, notification.build());
+    }
+
     /**
      * Checks if the system's clipboard is accessible and if not, because of Android 10+ limitation,
      * a message to the user should be displayed.
@@ -165,7 +189,7 @@ public class ClipboardManagerService extends Service {
 
         // Show notification with more information about the issue.
         NotificationCompat.Builder notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle("Clipboard Unaccessible")
                 .setContentText(getString(R.string.clipboard_unaccessible))
                 .setAutoCancel(true)

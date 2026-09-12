@@ -14,6 +14,10 @@
     <string name="clipboard_unaccessible">The application cannot access the clipboard while on the background.</string>
     <string name="clip_get_failed">Failed to get the contents of the clipboard.</string>
 
+    <!-- Quick access notification. -->
+    <string name="quick_access_title">Copy Stand</string>
+    <string name="quick_access_message">Use this notification to quickly add the clipboard contents to the clipboard manager.</string>
+
     <!-- Misc. -->
     <string name="grant_permission">Grant Permission</string>
     <string name="clipboard_help_url">https://github.com/nathanpc/copy-stand-android/blob/main/README.md#android-10-limitations</string>

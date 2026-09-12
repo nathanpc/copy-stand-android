@@ -75,9 +75,14 @@ public class MainActivity extends AppCompatActivity {
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
 
-        // Manually get the clipboard contents if we are not allowed in the background.
-        if (PermissionUtils.systemBlocksBackgroundClipboardAccess() && boundService)
-            clipboardService.updateFromClipboard();
+        if (PermissionUtils.systemBlocksBackgroundClipboardAccess()) {
+            // Manually get the clipboard contents if we are not allowed in the background.
+            if (boundService)
+                clipboardService.updateFromClipboard();
+
+            // Show notification to quickly access the application and copy data.
+            ClipboardManagerService.showQuickAccessNotification(this);
+        }
     }
 
     /**
